@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace KitchenShowCustomersCount.Patches
 {
+    
     [HarmonyPatch]
     public static class ParametersDisplayView_Patch
     {
@@ -55,4 +56,5 @@ namespace KitchenShowCustomersCount.Patches
             }
         }
     }
+    
 }

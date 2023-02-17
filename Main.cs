@@ -20,19 +20,17 @@ namespace KitchenShowCustomersCount
         // mod version must follow semver e.g. "1.2.3"
         public const string MOD_GUID = "IcedMilo.PlateUp.ShowCustomersCount";
         public const string MOD_NAME = "Show Customers Count";
-        public const string MOD_VERSION = "0.1.1";
+        public const string MOD_VERSION = "1.0.0";
         public const string MOD_AUTHOR = "IcedMilo";
         public const string MOD_GAMEVERSION = ">=1.1.1";
         // Game version this mod is designed for in semver
         // e.g. ">=1.1.1" current and all future
         // e.g. ">=1.1.1 <=1.2.3" for all from/until
 
-        public static bool IsRunningFakeSeed = false;
-        public static Kitchen.Seed RunSeed = default(Seed);
         public const string SHOW_CUSTOMERS_COUNT_ID = "showCustomersCount";
         public const int SHOW_CUSTOMERS_COUNT_INITIAL = 1;
-        public static KitchenLib.IntPreference ShowCustomersCountPreference;
-        public static int ShowCustomersCountValue = 0;
+        public const string UPDATE_DELAY_ID = "updateDelay";
+        public const float UPDATE_DELAY_INITIAL = 2f;
 
         public Main() : base(MOD_GUID, MOD_NAME, MOD_AUTHOR, MOD_VERSION, MOD_GAMEVERSION, Assembly.GetExecutingAssembly()) { }
 
@@ -42,18 +40,18 @@ namespace KitchenShowCustomersCount
             // For log file output so the official plateup support staff can identify if/which a mod is being used
             LogWarning($"{MOD_GUID} v{MOD_VERSION} in use!");
 
-            ShowCustomersCountPreference = PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, SHOW_CUSTOMERS_COUNT_ID, "Show Customers Count");
+            PreferenceUtils.Register<KitchenLib.IntPreference>(MOD_GUID, SHOW_CUSTOMERS_COUNT_ID, "Show Customers Count");
             PreferenceUtils.Get<KitchenLib.IntPreference>(MOD_GUID, SHOW_CUSTOMERS_COUNT_ID).Value = SHOW_CUSTOMERS_COUNT_INITIAL;
+            PreferenceUtils.Register<KitchenLib.FloatPreference>(MOD_GUID, UPDATE_DELAY_ID, "Update Delay");
+            PreferenceUtils.Get<KitchenLib.FloatPreference>(MOD_GUID, UPDATE_DELAY_ID).Value = UPDATE_DELAY_INITIAL;
             PreferenceUtils.Load();
             LogInfo($"Registered preference {MOD_GUID}:{SHOW_CUSTOMERS_COUNT_ID}");
-            ShowCustomersCountValue = PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.SHOW_CUSTOMERS_COUNT_ID).Value;
             SetupPreferences();
         }
 
         protected override void OnInitialise()
         {
             base.OnInitialise();
-
             try
             {
                 World.GetExistingSystem<ParametersDisplayView.UpdateView>().Enabled = false;
@@ -72,11 +70,6 @@ namespace KitchenShowCustomersCount
                 args.Menus.Add(typeof(ShowCustomersCountPreferences<PauseMenuAction>), new ShowCustomersCountPreferences<PauseMenuAction>(args.Container, args.Module_list));
             };
             ModsPreferencesMenu<PauseMenuAction>.RegisterMenu(MOD_NAME, typeof(ShowCustomersCountPreferences<PauseMenuAction>), typeof(PauseMenuAction));
-
-            Events.PreferencesSaveEvent += (s, args) =>
-            {
-                ShowCustomersCountValue = PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.SHOW_CUSTOMERS_COUNT_ID).Value;
-            };
         }
 
         protected override void OnUpdate()
@@ -98,6 +91,8 @@ namespace KitchenShowCustomersCount
     {
         private Option<int> Option;
 
+        private Option<float> UpdateDelay;
+
         public ShowCustomersCountPreferences(Transform container, ModuleList module_list) : base(container, module_list)
         {
         }
@@ -113,6 +108,20 @@ namespace KitchenShowCustomersCount
             Add<int>(this.Option).OnChanged += delegate (object _, int f)
             {
                 PreferenceUtils.Get<KitchenLib.IntPreference>(Main.MOD_GUID, Main.SHOW_CUSTOMERS_COUNT_ID).Value = f;
+                PreferenceUtils.Save();
+            };
+
+
+            this.UpdateDelay = new Option<float>(
+                new List<float>() { 0.5f, 1f, 1.5f, 2f, 3f, 4f, 5f, 10f },
+                PreferenceUtils.Get<KitchenLib.FloatPreference>(Main.MOD_GUID, Main.UPDATE_DELAY_ID).Value,
+                new List<string>() { "0.5", "1.0", "1.5", "2.0", "3.0", "4.0", "5.0", "10.0" });
+
+            AddLabel("Update Delay");
+            AddInfo("\"Seed Affects Layout Only\" causes the customer count to be randomized. Set the delay for updates to prevent flickering.");
+            Add<float>(this.UpdateDelay).OnChanged += delegate (object _, float f)
+            {
+                PreferenceUtils.Get<KitchenLib.FloatPreference>(Main.MOD_GUID, Main.UPDATE_DELAY_ID).Value = f;
                 PreferenceUtils.Save();
             };
 
